@@ -4,7 +4,7 @@
   var Item = Backbone.Model.extend({
     defaults: {
       name: '',
-      price: ''
+      price: 0
     }
   });
 
@@ -90,8 +90,33 @@
   var OrderView = Backbone.View.extend({
     template: _.template($('#order-template').text()),
 
+    initialize: function(){
+      this.listenTo(this.model, 'change', this.render);
+    },
+
     render: function(){
-      this.$el.html(this.template());
+      // remove children to avoid zombie views
+      _.invoke(this.children, 'remove');
+
+      this.$el.html(this.template(this.model.toJSON()));
+
+      var self = this;
+      this.children = this.model.get('items').map(function(item){
+        var view = new OrderItemView({model: item});
+        self.$('ul').append(view.render().el);
+        return view;
+      });
+
+      return this;
+    }
+  });
+
+  var OrderItemView = Backbone.View.extend({
+    tagName: 'li',
+    template: _.template($('#order-item-template').text()),
+
+    render: function(){
+      this.$el.html(this.template(this.model));
       return this;
     }
   });
@@ -112,7 +137,13 @@
         el: '.js-category-view',
         collection: this.items
       });
-      this.orderView = new OrderView({el: '.js-order-view'});
+
+      this.order = new Order();
+      this.orderView = new OrderView({
+        el: '.js-order-view',
+        model: this.order
+      });
+
       this.navView = new NavView({el: '.js-primary-nav'});
     },
 
