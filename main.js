@@ -4,6 +4,7 @@
   var Item = Backbone.Model.extend({
     defaults: {
       name: '',
+      category: '',
       price: 0
     }
   });
@@ -13,6 +14,12 @@
     url: "https://api.parse.com/1/classes/Item",
     parse: function(response){
       return response.results;
+    },
+
+    getCategories: function(){
+      return _.uniq(this.pluck('category')).map(function(cat){
+        return {name: cat, slug: encodeURI(cat)};
+      });
     }
   });
 
@@ -63,13 +70,17 @@
     initialize: function(options){
       options = options || {};
       this.order = options.order;
+
+      this.listenTo(this.collection, 'reset', this.render);
     },
 
     render: function(){
       // remove children to avoid zombie views
       _.invoke(this.children, 'remove');
 
-      this.$el.html(this.template());
+      var category = this.collection.pluck('category')[0];
+
+      this.$el.html(this.template({category: category}));
 
       var self = this;
       this.children = this.collection.map(function(item){
@@ -143,7 +154,29 @@
   });
 
   var NavView = Backbone.View.extend({
+    render: function(){
+      // remove children to avoid zombie views
+      _.invoke(this.children, 'remove');
 
+      var self = this;
+      this.children = this.collection.getCategories().map(function(category){
+        var view = new NavItemView({model: category});
+        self.$('ul').append(view.render().el);
+        return view;
+      });
+
+      return this;
+    }
+  });
+
+  var NavItemView = Backbone.View.extend({
+    tagName: 'li',
+    template: _.template($('#nav-item-template').text()),
+
+    render: function(){
+      this.$el.html(this.template(this.model));
+      return this;
+    }
   });
 
   var AppRouter = Backbone.Router.extend({
@@ -153,12 +186,25 @@
     },
 
     initialize: function(){
+      this.appModel = new Backbone.Model();
+
+      var self = this;
+      this.listenTo(this.appModel, 'change:selectedCategory', function(m, val){
+        self.selectedItems.reset( self.items.where({category: val}) );
+      });
+
       this.order = new Order();
 
-      this.items = new Backbone.Collection([{name: "Cool Food", price: 1}]);
+      this.items = new ItemCollection([
+        {name: "Soup", price: 1, category: "Appetizers"},
+        {name: "Real Food", price: 20, category: "Entree Items"}
+      ]);
+
+      this.selectedItems = new ItemCollection();
+
       this.categoryView = new CategoryView({
         el: '.js-category-view',
-        collection: this.items,
+        collection: this.selectedItems,
         order: this.order
       });
 
@@ -167,16 +213,21 @@
         model: this.order
       });
 
-      this.navView = new NavView({el: '.js-primary-nav'});
+      this.navView = new NavView({
+        el: '.js-primary-nav',
+        collection: this.items
+      });
+
+      this.categoryView.render();
+      this.orderView.render();
+      this.navView.render();
     },
 
     index: function(){
-      this.categoryView.render();
-      this.orderView.render();
     },
 
-    showCategory: function(){
-
+    showCategory: function(name){
+      this.appModel.set('selectedCategory', decodeURI(name));
     }
   });
 
