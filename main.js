@@ -61,8 +61,12 @@
     template: _.template($('#category-template').text()),
 
     render: function(){
-      var self = this;
+      // remove children to avoid zombie views
+      _.invoke(this.children, 'remove');
+
       this.$el.html(this.template());
+
+      var self = this;
       this.children = this.collection.map(function(item){
         var view = new ItemView({model: item});
         self.$('ul').append(view.render().el);
