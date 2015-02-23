@@ -60,6 +60,11 @@
   var CategoryView = Backbone.View.extend({
     template: _.template($('#category-template').text()),
 
+    initialize: function(options){
+      options = options || {};
+      this.order = options.order;
+    },
+
     render: function(){
       // remove children to avoid zombie views
       _.invoke(this.children, 'remove');
@@ -68,7 +73,10 @@
 
       var self = this;
       this.children = this.collection.map(function(item){
-        var view = new ItemView({model: item});
+        var view = new ItemView({
+          model: item,
+          order: self.order
+        });
         self.$('ul').append(view.render().el);
         return view;
       });
@@ -80,6 +88,19 @@
   var ItemView = Backbone.View.extend({
     tagName: 'li',
     template: _.template($('#item-template').text()),
+
+    initialize: function(options){
+      options = options || {};
+      this.order = options.order;
+    },
+
+    events: {
+      'click .js-add': 'addItem'
+    },
+
+    addItem: function(){
+      this.order.addItem(this.model);
+    },
 
     render: function(){
       this.$el.html(this.template(this.model.toJSON()));
@@ -132,13 +153,15 @@
     },
 
     initialize: function(){
+      this.order = new Order();
+
       this.items = new Backbone.Collection([{name: "Cool Food", price: 1}]);
       this.categoryView = new CategoryView({
         el: '.js-category-view',
-        collection: this.items
+        collection: this.items,
+        order: this.order
       });
 
-      this.order = new Order();
       this.orderView = new OrderView({
         el: '.js-order-view',
         model: this.order
