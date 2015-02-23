@@ -33,14 +33,19 @@
       });
     },
 
-    addItem: function(item){
+    addItem: function(itemModel){
       // 1. use item.toJSON since we need to turn a model into an object that
       //    looks like {name: "Cool Food", price: 100}
       // 2. use set + concat because, if you were to just modify items in place
       //    (e.g. using .push) it wouldn't fire a change event. .concat takes an
       //    array and returns a new array of the two arrays combined, so it will
       //    fire a change event.
-      this.set('items', this.get('items').concat([item.toJSON()]));
+      this.set('items', this.get('items').concat([itemModel.toJSON()]));
+    },
+
+    removeItem: function(item){
+      var matching = _.where(this.get('items'), item);
+      this.set('items', _.difference(this.get('items'), matching) );
     },
 
     totalPrice: function(){
@@ -134,7 +139,10 @@
 
       var self = this;
       this.children = this.model.get('items').map(function(item){
-        var view = new OrderItemView({model: item});
+        var view = new OrderItemView({
+          order: self.model,
+          model: item
+        });
         self.$('ul').append(view.render().el);
         return view;
       });
@@ -146,6 +154,19 @@
   var OrderItemView = Backbone.View.extend({
     tagName: 'li',
     template: _.template($('#order-item-template').text()),
+
+    events: {
+      'click .js-remove': 'removeItem'
+    },
+
+    initialize: function(options){
+      options = options || {};
+      this.order = options.order;
+    },
+
+    removeItem: function(){
+      this.order.removeItem(this.model);
+    },
 
     render: function(){
       this.$el.html(this.template(this.model));
