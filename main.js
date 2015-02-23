@@ -1,18 +1,41 @@
 (function(){
   'use strict';
 
+  var CategoryView = Backbone.View.extend({
+    template: _.template($('#category-template').text()),
+
+    render: function(){
+      this.$el.html(this.template());
+    }
+  });
+
+  var OrderView = Backbone.View.extend({
+    template: _.template($('#order-template').text()),
+
+    render: function(){
+      this.$el.html(this.template());
+    }
+  });
+
+  var NavView = Backbone.View.extend({
+
+  });
+
   var AppRouter = Backbone.Router.extend({
     routes: {
       '': 'index',
       'category/:name': 'showCategory'
     },
 
-    index: function(){
-      var categoryTemplate = _.template($('#category-template').text());
-      $('.js-category-view').html(categoryTemplate());
+    initialize: function(){
+      this.categoryView = new CategoryView({el: '.js-category-view'});
+      this.orderView = new OrderView({el: '.js-order-view'});
+      this.navView = new NavView({el: '.js-primary-nav'});
+    },
 
-      var orderTemplate = _.template($('#order-template').text());
-      $('.js-order-view').html(orderTemplate());
+    index: function(){
+      this.categoryView.render();
+      this.orderView.render();
     },
 
     showCategory: function(){
